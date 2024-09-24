@@ -114,20 +114,28 @@ class Agent:
 ### Game Description
 
 This is a negotiation game. There are {self.example_count[0]} books, {self.example_count[1]} hats, and {self.example_count[2]} balls in total. 
-Each item has a value to you and the other player {self.the_other_player}. You only know your values for all the item, but you don't know {self.the_other_player}'s valuation of each item; this is unknown to you.
+Each item has a value to you and the other player {self.the_other_player} which is unknown to you and can be very different from yours.
 Thus do not assume the value of the items to the other player {self.the_other_player} is the same as yours.
 
-Your goal is to MAXIMIZE the total reward/value you alone can obtain by taking the items after negotiation, which is the sum of the VALUES of the items you get.
+Your goal is to MAXIMIZE the total VALUE you alone can obtain by taking the items after negotiation.
 You need to negotiate with the other player {self.the_other_player} to decide which and how many items you and your the other player {self.the_other_player} will each get.
 DO NOT REVEAL your values of the items to the other player {self.the_other_player} through out the game.
 Notice that if you come to disagreement on the negotiation, neither of you will obtain any reward.
 
-There are two principles you need to focus on when discussing the deal with your the other player {self.the_other_player}: 
-(1) pareto optimality: a deal is pareto optimal if there is no other deal that makes both you and your the other player better off.
-(2) envy freeness: a deal is envy free if each person receive items that are, in their eyes, at least as valuable as the share received by your the other player.
-Deals that are both pareto optimal and envy free are considered the best deals.
-
 You are playing the role of {self.name}. The player you negotiate with is {self.the_other_player}.
+
+### Pareto Optimality and Envy Freeness Principles
+
+There are two principles you need to consider when discussing the deal with your the other player {self.the_other_player}: 
+
+(1) pareto optimality: a deal is pareto optimal if there is no other deal that makes both you and your the other player better off.
+e.g. Imagine Alice and Bob are dividing an 8-slice pizza, both liking all slices equally. Deal 1, where each gets 4 slices, is Pareto optimal as no other deal improves both players' outcomes without worsening one's. Deal 2, with Alice getting 3 slices and Bob 4, is not Pareto optimal since an equal split makes both better off or at least not worse off.
+
+(2) envy freeness: a deal is envy free if each person receive items that are, in their eyes, at least as valuable as the share received by your the other player.
+e.g. Alice and Bob are dividing a book, a toy, and a candy bar; Alice prefers the book, then toy, then candy bar, while Bob prefers the toy, then candy bar, then book. Deal 1, where Alice gets the book and Bob gets the toy and candy bar, is envy-free as both prefer their shares. Deal 2, with Alice getting the toy and Bob the book and candy bar, is not envy-free as both would prefer the other's share.
+
+Pareto optimality and envy-freeness are beneficial for negotiations as they promote efficiency and fairness, respectively. These principles enhance stability and mutual satisfaction, reducing the likelihood of resentment or renegotiation. By ensuring that resources are allocated effectively and that all parties feel fairly treated, they foster productive and harmonious relationships.
+Remember, DO NOT REVEAL your values of the items to the other player {self.the_other_player} through out the game.
 
 ### Item Values to You
 
@@ -138,10 +146,10 @@ You are playing the role of {self.name}. The player you negotiate with is {self.
 ### Game Description
 
 This is a negotiation game. There are {self.example_count[0]} books, {self.example_count[1]} hats, and {self.example_count[2]} balls in total. 
-Each item has a value to you and the other player {self.the_other_player}. You only know your values for all the item, but you don't know {self.the_other_player}'s valuation of each item; this is unknown to you.
+Each item has a value (range minimum 0 - maximum 10) to you and the other player {self.the_other_player} which is unknown to you and can be very different from yours.
 Thus do not assume the value of the items to the other player {self.the_other_player} is the same as yours.
 
-Your goal is to MAXIMIZE the total reward/value you alone can obtain by taking the items after negotiation, which is the sum of the VALUES of the items you get.
+Your goal is to MAXIMIZE the total VALUE you alone can obtain by taking the items after negotiation.
 You need to negotiate with the other player {self.the_other_player} to decide which and how many items you and your partner {self.the_other_player} will each get.
 DO NOT REVEAL your values of the items to the other player {self.the_other_player} through out the game.
 Notice that if you come to disagreement on the negotiation, neither of you will obtain any reward.
@@ -185,10 +193,10 @@ Write down the number of books, hats, and balls you want to get in the format of
 
         guess_on_rank_prompt = f"""
 
-### Guess the Relative Item Value of the Other Player
+### Guess the Relative Item Value to the Other Player
 
 Based on the current negotiation messages, what do you think are the relative item values to the other player {self.the_other_player}?
-Now, rank the item values of the other player from the most valuable to the least valuable. 
+Now, rank the item values to the other player from the most valuable to the least valuable. 
 For example, if you think the books are the most valuable to {self.the_other_player}, followed by the hats, and then the balls, you can write down <value>book > hat > ball</value>.
 """
         previous_messages = "\n\n## The previous rounds of negotiation are presented below:\n\n" + '\n'.join(self.previous_message)
@@ -210,7 +218,7 @@ For example, if you think the books are the most valuable to {self.the_other_pla
             start = message.index("<value>") + len("<value>")
             end = message.index("</value>")
             rank = message[start:end]
-            assert ',' in rank
+            assert '\n' in rank
             return rank
         
         guess_on_value_prompt = f"""
@@ -225,10 +233,13 @@ For example, if you think the other player values the books more than you, the h
         
         present_deal_prompt = self.game_description + previous_messages + guess_on_value_prompt
 
+        n = 0
         while True:
             try:
+                n += 1
+                if n > 2:
+                    return 'cannot parse'
                 message = close_source_call('claude', present_deal_prompt, self.args.system_prompt)
-                print('message:', message)
                 rank = parse_ranked_value(message)
                 return rank 
             except:
@@ -242,20 +253,29 @@ For example, if you think the other player values the books more than you, the h
         ## what is the initial negotiation message?
         if self.args.special_prompting:
             negotiate_prompt = f"""
+### Pareto Optimality and Envy Freeness Principles
+
+There are two principles you need to consider when discussing the deal with your the other player {self.the_other_player}: 
+
+(1) pareto optimality: a deal is pareto optimal if there is no other deal that makes both you and your the other player better off.
+e.g. Imagine Alice and Bob are dividing an 8-slice pizza, both liking all slices equally. Deal 1, where each gets 4 slices, is Pareto optimal as no other deal improves both players' outcomes without worsening one's. Deal 2, with Alice getting 3 slices and Bob 4, is not Pareto optimal since an equal split makes both better off or at least not worse off.
+
+(2) envy freeness: a deal is envy free if each person receive items that are, in their eyes, at least as valuable as the share received by your the other player.
+e.g. Alice and Bob are dividing a book, a toy, and a candy bar; Alice prefers the book, then toy, then candy bar, while Bob prefers the toy, then candy bar, then book. Deal 1, where Alice gets the book and Bob gets the toy and candy bar, is envy-free as both prefer their shares. Deal 2, with Alice getting the toy and Bob the book and candy bar, is not envy-free as both would prefer the other's share.
+
+Pareto optimality and envy-freeness are beneficial for negotiations as they promote efficiency and fairness, respectively. These principles enhance stability and mutual satisfaction, reducing the likelihood of resentment or renegotiation. By ensuring that resources are allocated effectively and that all parties feel fairly treated, they foster productive and harmonious relationships.
+Remember, DO NOT REVEAL your values of the items to the other player {self.the_other_player} through out the game.
+
 ### Negotiation
 
 You can discuss with {self.the_other_player} to maximize the reward you can obtain. You have a maximum of {self.max_negotiation_round} rounds to negotiate.
 Analyze the situation and decide on what to say to your the other player {self.the_other_player}.
 
-There are two principles you need to focus on when negotiate on the deal: 
-(1) pareto optimality: a deal is pareto optimal if there is no other deal that makes both you and your the other player better off.
-(2) envy freeness: a deal is envy free if you do not envy the reward your the other player gets.
-Deals that are both pareto optimal and envy free are considered the best deals.
-Thus you should pay attention to whether the deal is pareto optimal and envy free when negotiating on the deal.
-
 Surround your message with '<s>' and '</s>' to indicate the start and end of your message. For example, '<s>Hi, how are you?</s>'.
 You can also choose the halt the negotiation by saying '<s>halt negotiation</s>'.
 Especially, if you have come to an agreement, say '<s>halt negotiation</s>' to end the negotiation.
+
+Remember, DO NOT REVEAL your values of the items to the other player {self.the_other_player} through out the game.
 """
         else:
             negotiate_prompt = f"""
@@ -473,17 +493,18 @@ Especially, if you have come to an agreement, say '<s>halt negotiation</s>' to e
         envy_free = False 
         pareto_optimal = False
         most_round = 0 # rethink at most 3 times
+        negotiation_message = self.initial_negotiation_message()
+        print('##Initial negotiation message:', negotiation_message)
+        print("START REFLECTION!")
+        value_rank = self.guess_on_value_rank() # book > hat > ball for 1 player
+        print('##Value rank:', value_rank)
+        relative_value = self.guess_on_relative_value() # comparison between 2 players
+        print('##Relative value:', relative_value)
         while not envy_free or not pareto_optimal:
-            negotiation_message = self.initial_negotiation_message()
-            print('##Initial negotiation message:', negotiation_message)
             if negotiation_message == 'halt negotiation':
                 return negotiation_message
             current_proposal = self.summarize_deal_basedon_message(negotiation_message)
             print('##Current proposal:', current_proposal)
-            value_rank = self.guess_on_value_rank() # book > hat > ball for 1 player
-            print('##Value rank:', value_rank)
-            relative_value = self.guess_on_relative_value() # comparison between 2 players
-            print('##Relative value:', relative_value)
             envy_free_suggestion = self.self_reflect_on_envy_free(value_rank, current_proposal)
             print('##Envy free suggestion:', envy_free_suggestion)
             pareto_optimal_suggestion = self.self_reflect_on_pareto_optimal(relative_value, current_proposal)
@@ -494,7 +515,9 @@ Especially, if you have come to an agreement, say '<s>halt negotiation</s>' to e
             pareto_optimal = pareto_optimal_suggestion[0] == 'yes'
             most_round += 1
             if most_round > 2:
+                print("FINISH REFLECTION!")
                 return negotiation_message
+        print("FINISH REFLECTION!")
         return negotiation_message
             
     def negotiate_without_feedback(self):
@@ -566,11 +589,20 @@ class DealNoDeal:
                 return 'No deal', 'No deal', total_negotiation_round
         
     def check_reasonable_guess(self):
+        def compute_gold_value_rank(values):
+            rank_string = ''
+            sorted_value = list({k: v for k, v in sorted(values.items(), key=lambda item: item[1], reverse=True)}.keys())
+            for i, item in enumerate(sorted_value[:-1]):
+                if values[sorted_value[i]] > values[sorted_value[i+1]]:
+                    rank_string += f'{item} > '
+                else:
+                    rank_string += f'{item} = '
+            return rank_string + sorted_value[-1]
         items = ['book', 'hat', 'ball']
         alice_value = {'book':self.agent1_values[0], 'hat':self.agent1_values[1], 'ball':self.agent1_values[2]}
-        alice_value_rank = list({k: v for k, v in sorted(alice_value.items(), key=lambda item: item[1])}.keys())
+        alice_value_rank = compute_gold_value_rank(alice_value) 
         bob_value = {'book':self.agent2_values[0], 'hat':self.agent2_values[1], 'ball':self.agent2_values[2]}
-        bob_value_rank = list({k: v for k, v in sorted(bob_value.items(), key=lambda item: item[1])}.keys())
+        bob_value_rank = compute_gold_value_rank(bob_value) 
         bob_relative_value = []
         alice_relative_value = []
         for i, (alice_value, bob_value) in enumerate(zip(self.agent1_values, self.agent2_values)):
@@ -580,22 +612,45 @@ class DealNoDeal:
             elif alice_value > bob_value:
                 alice_relative_value.append(f'higher than you: {items[i]}')
                 bob_relative_value.append(f'less than you: {items[i]}')
+            elif alice_value == bob_value:
+                alice_relative_value.append(f'equal to you: {items[i]}')
+                bob_relative_value.append(f'equal to you: {items[i]}')
+
+        def clear_relative_value(relative_value):
+            relative_value_list = []
+            relative_value = relative_value.split('\n')
+            for item in ['book', 'hat', 'ball']:
+                for l in relative_value:
+                    if item in l:
+                        if 'higher' in l:
+                            relative_value_list.append(f'higher than you: {item}')
+                        elif 'less' in l:
+                            relative_value_list.append(f'lower than you: {item}')
+                        elif 'same' in l:
+                            relative_value_list.append(f'equal to you: {item}')
+            return relative_value_list
                 
         guessed_bob_value_rank = self.alice.guess_on_value_rank()
         print('Alice guessed Bob value rank:', guessed_bob_value_rank)
         print('Actual Bob value rank:', bob_value_rank)
 
         guessed_bob_relative_value = self.alice.guess_on_relative_value()
-        print('Alice guessed Bob relative value:', guessed_bob_relative_value)
-        print('Actual Bob relative value:', bob_relative_value)
+        if guessed_bob_relative_value != 'cannot parse':
+            print('Alice guessed Bob relative value:', clear_relative_value(guessed_bob_relative_value))
+            print('Actual Bob relative value:', bob_relative_value)
+            print('-'*20)
 
         guessed_alice_value_rank = self.bob.guess_on_value_rank()
         print('Bob guessed Alice value rank:', guessed_alice_value_rank)
         print('Actual Alice value rank:', alice_value_rank)
 
         guessed_alice_relative_value = self.bob.guess_on_relative_value()
-        print('Bob guessed Alice relative value:', guessed_alice_relative_value)
-        print('Actual Alice relative value:', alice_relative_value)
+        if guessed_alice_relative_value != 'cannot parse':
+            print('Alice guessed Bob relative value:', clear_relative_value(guessed_alice_relative_value))
+            print('Actual Bob relative value:', alice_relative_value)
+            print('-'*20)
+
+        return guessed_bob_value_rank, bob_value_rank, guessed_bob_relative_value, bob_relative_value, guessed_alice_value_rank, alice_value_rank, guessed_alice_relative_value, alice_relative_value
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Deal or No Deal')
@@ -624,14 +679,26 @@ if __name__ == '__main__':
 
     # play the game
     game = DealNoDeal(args, data[args.datapoint_id])
+    print(f"Game Setting:\nAlice's value: {game.agent1_values_text}\nBob's value: {game.agent2_values_text}")
+    print("="*20 + "START!" + "="*20)
     alice_deal, bob_deal, total_negotiation_round = game.play()
     print('Alice deal:')
     print(alice_deal)
     print('Bob deal:')
     print(bob_deal)
-    print('Total negotiation round:', total_negotiation_round)
+    print('Total negotiation round:', total_negotiation_round+1)
     data_to_collect = {'negotiation_message':game.alice.previous_message, 'alice_deal':alice_deal, 'bob_deal':bob_deal, 'total_negotiation_round':total_negotiation_round}
-    game.check_reasonable_guess()
+    
+    # check the reasonableness of the guess
+    guessed_bob_value_rank, bob_value_rank, guessed_bob_relative_value, bob_relative_value, guessed_alice_value_rank, alice_value_rank, guessed_alice_relative_value, alice_relative_value = game.check_reasonable_guess()
+    data_to_collect['guessed_bob_value_rank'] = guessed_bob_value_rank
+    data_to_collect['actual_bob_value_rank'] = bob_value_rank
+    data_to_collect['guessed_alice_value_rank'] = guessed_alice_value_rank
+    data_to_collect['actual_alice_value_rank'] = alice_value_rank
+    data_to_collect['guessed_bob_relative_value'] = guessed_bob_relative_value
+    data_to_collect['actual_bob_relative_value'] = bob_relative_value
+    data_to_collect['guessed_alice_relative_value'] = guessed_alice_relative_value
+    data_to_collect['actual_alice_relative_value'] = alice_relative_value
 
     # check performance on envy free & pareto optimal
     alice_score = compute_score(alice_deal, game.agent1_values)
@@ -659,9 +726,11 @@ if __name__ == '__main__':
 
     if args.special_prompting:
         with open('result/deal_no_deal/prompting_{}.json'.format(args.datapoint_id), 'w') as f:
-            json.dump(data_to_collect, f)
+            json.dump(data_to_collect, f, indent=4)
+    elif args.use_workflow:
+        with open('result/deal_no_deal/workflow_{}.json'.format(args.datapoint_id), 'w') as f:
+            json.dump(data_to_collect, f, indent=4)
     else:
         with open('result/deal_no_deal/{}.json'.format(args.datapoint_id), 'w') as f:
-            json.dump(data_to_collect, f)
-        
+            json.dump(data_to_collect, f, indent=4)
         
