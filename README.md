@@ -100,4 +100,5 @@ The source code of Game-theoretic LLM is licensed under [Apache 2.0](https://git
   journal={arXiv preprint arXiv:2411.05990},
 
   year={2024}
+
 }
