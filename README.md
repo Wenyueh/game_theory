@@ -92,9 +92,12 @@ The source code of Game-theoretic LLM is licensed under [Apache 2.0](https://git
 
 ## Citation
 @article{hua2024game,
+
   title={Game-theoretic LLM: Agent workflow for negotiation games},
+
   author={Hua, Wenyue and Liu, Ollie and Li, Lingyao and Amayuelas, Alfonso and Chen, Julie and Jiang, Lucas and Jin, Mingyu and Fan, Lizhou and Sun, Fei and Wang, William and others},
+
   journal={arXiv preprint arXiv:2411.05990},
+
   year={2024}
 }
-
